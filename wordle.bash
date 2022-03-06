@@ -41,20 +41,16 @@ done
 shift $((OPTIND-1))
 
 
-#Just make a wordlist array... you can put whatever you want here
+#TODO: possible improvement is to actually have a wordlist of the top n-thousand words of the particular lanugage
+#Just make a wordlist array... you can put whatever you want here in terms of wordlists or other filters
 readarray -t words < <(grep -E "^[a-zA-Z]{${length}}\$" /usr/share/dict/words | iconv -f utf8 -t ascii//TRANSLIT | tr '[:upper:]' '[:lower:]' | grep "$additional_grep_pattern" | grep -vi "[${exclude_letters}]" | sort -u)
 
+#Ensure required letters are included in each word
 for (( i=0; i<${#require_letters}; i++ )); do
     require_letter="${require_letters:$i:1}"
     echo "Requiring '$require_letter' to be present" >&2
     readarray -t words_new < <(printf "%s\n" "${words[@]}" | grep -F "${require_letter}")
-
-#echo "${require_letter}"
-#echo "OLD: ${words[@]}"
-#echo "NEW: ${words_new[@]}"
-#echo
     words=("${words_new[@]}")
-
 done
 
 #Associative arrays require BaSH 4.X+
@@ -67,10 +63,9 @@ for (( i=0; i<${#exclude_letters}; i++ )); do
     unset alpha_counts["$exclude_letter"]
 done
 
-
+#Output some minor statistics
 echo "Number of letters tested: ${#alpha_counts[@]}" >&2
 echo "Letters tested: ${!alpha_counts[*]}" >&2
-
 echo "Number of words: ${#words[@]}" >&2
 
 #Score the letters by commonality
@@ -88,11 +83,11 @@ echo "Scanning letter '$alpha'..." >&2
     done
 done
 
+#Output more minor statistics
 echo 'Character counts:' >&2
 for alpha in "${!alpha_counts[@]}"; do
     echo "${alpha_counts[$alpha]}" "$alpha"
 done | sort -rn >&2
-
 
 echo 'Searching for most-likely to hit word:'
 for w in "${words[@]}"; do
@@ -106,3 +101,5 @@ for w in "${words[@]}"; do
     done
     echo "${w} (${word}): ${score}"
 done | sort -k3n
+
+#TODO: possible improvement is to actually have a pre-compiled word-frequency list instead of a simple character frequency count
